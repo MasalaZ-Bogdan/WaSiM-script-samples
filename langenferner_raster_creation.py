@@ -1,5 +1,10 @@
-#   A script for taking an ASCII file of glacier cover and setting no data
-#   values outside of your catchment area.
+'''
+This script takes ASCII files of Langenferner glacier extent (or your glacier of interest) which may have
+data values outside of your catchment area, and "clips" them to the extent of your catchment defined in your
+WaSiM project. Needs an existing subcatchment file (ending in ".ezg").
+
+'''
+
 import numpy as np
 import os
 import pandas as pd
@@ -11,15 +16,15 @@ import sys
 sys.path.insert(0, path)
 import shutil as sh
 
+#needed: dictionaries for file names and functions for raster operations
+
 #set directory paths and filenames
 path_init = 'C:\\Users\\Asus\\Documents\\Thesis\\WaSiM_setup\\Init' #WaSiM init folder
 path_input = 'C:\\Users\\Asus\\Documents\\Thesis\\WaSiM_setup\\Input' #WaSiM input folder
 path_langenferner = os.path.join(path_init,'langenferner')
 
-#for loops needed for all filenames and rasters below
-
 #variable names of langenferner raster files, derived from langenferner shapefiles cut from glims and sudtirol datasets
-#for loop needed here
+
 lang_1997_fname = 'langenferner_1997_buergernetz.asc'
 lang_2000_fname = 'langenferner_2000_glims.asc'
 lang_2003_fname = 'langenferner_2003_glims.asc'
@@ -38,7 +43,6 @@ ezg_0 = ezg.copy()
 ezg_0[ezg_0 >= 0] = 0
 
 #clip langenferner glaciers to extent of subcatchment
-#for loops
 #################### 1997 raster ###############################
 lang_1997_ds = rasterio.open(os.path.join(path_langenferner, lang_1997_fname))
 lang_1997 = lang_1997_ds.read(1)
@@ -115,7 +119,6 @@ lang_2017_ezg[lang_2017_ezg < 0] = -9999
 #set profile
 kwds_ezg = ezg_ds.profile
 
-#for loops here
 #1997
 lang_1997_file = rasterio.open(os.path.join(path_init,'langenferner_1997.asc'), 'w', **kwds_ezg)
 lang_1997_file.write(lang_1997_ezg,1)
@@ -142,7 +145,6 @@ lang_2017_file.write(lang_2017_ezg,1)
 lang_2017_file.close()
 
 #close open datasets
-#another for loop needed
 lang_1997_ds
 lang_2000_ds
 lang_2003_ds
