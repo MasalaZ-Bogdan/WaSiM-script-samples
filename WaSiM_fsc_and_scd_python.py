@@ -1,5 +1,10 @@
-#   Script for computing fractional snow-covered area and 
-#   snow cover duration for your catchment
+'''
+This script uses creates binary snow cover rasters and snow cover duration by grid cell, 
+using the daily snow depth rasters of your WaSiM model output. Snow cover duration rasters are 
+computed with cumulative values up to the number of days in the year, as well as normalized 
+between 0 and 1.
+'''
+
 import spotpy
 import numpy as np
 import os
@@ -14,7 +19,8 @@ sys.path.insert(0, path)
 import shutil as sh
 from dateutil.parser import parse
 
-#numerous functions and additional loops needed for efficiency and aesthetics of code
+#dictionaries needed for folder and file names
+#functions needed to simplify raster functions, currently separate code for each year
 
 #working directory change to output folder for calculations or not?
 path = 'C:\\Users\\Asus\\Documents\\Thesis\\WaSiM_setup'
