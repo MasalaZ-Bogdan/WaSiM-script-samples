@@ -1,199 +1,97 @@
 '''
-This script allows you to compare the amount and frequency of snow days from different model outputs
-with that of an observational series, for a given station. If the snow cover duration and timing of 
-the model output is well-correlated with that of the observations, then the station data can be used
-for calibration.
+When using model-based weather data, ground observation time series can not necessarily be used for goodness-of-fit
+testing. This script computes the "snow days" of observed and simulated time series for a particular measurement 
+station. Snow days are defined as days where SWE (snow water equivalent) is increasing. Goodness-of-fit between 
+the observed and simulated snow day time series is then computed.
+This script can also be generalized for goodness-of-fit testing of any time series.
 '''
-import spotpy
+
+#import libraries
 import numpy as np
-import os
 import pandas as pd
-import subprocess
+import os
 from datetime import datetime as dt
-import re
-import math
-path = os.getcwd() 
-import sys
-sys.path.insert(0, path)
-import shutil as sh
 from dateutil.parser import parse
+import math
 import matplotlib.pyplot as plt   
 
-#dictionaries and functions needed
+#set path of working directory
+path = os.getcwd() 
 
-############################################################
-#calculate days of increasing SWE in observations
-######################################################################
-obs_file = '11200BM_StauseeZufrittBeobachter_DigadiGioverettoOsservatore_HS_SWE.Beobachter_0900Day.Cmd.csv'
-obs_dir = 'C:\\Users\\Asus\\Documents\\StudyProject2023S\\WaSiM_setuptest\\Observation\\Snow'
-obs_path = os.path.join(obs_dir, obs_file)
-zufritt_obs = pd.read_csv(obs_path, sep = ',', engine = 'python', parse_dates=True)
-O = zufritt_obs[9488:10949]
+#set directory paths and filenames
+#path to the observations file
+observations_filepath = 'observed_SWE.txt'
+#path to the output file
+output_filepath = 'simulated_ssto_SWE_sday.stat'
 
-O_snowdays = np.zeros(len(O))
-a=0
-for a in range(len(O_snowdays)-1):
-    if float(O.loc[a+9489,'SWE_Pistocchi'])>float(O.loc[a+9488,'SWE_Pistocchi']):
-        O_snowdays[a+1] = 1
-    else:
-        O_snowdays[a+1] = 0
-  
-############################################################
-#use sday output, using subcatchment 1
-######################################################################
-sday_dir = 'C:\\Users\\Asus\\Documents\\StudyProject2023S\\WaSiM_setuptest\\Test_output'
-sday_file = 'sdaydem_25_2006_large.stat'
-sday_path = os.path.join(sday_dir,sday_file)
-sday = np.loadtxt(sday_path,dtype=str,skiprows=2,usecols=(0,1,2,3,4))
+#list of simulated series to be used for comparison against observations:
+#sday, snow rate for subcatchment, otherSnowData at specific grid cell, point from WRF data, 
 
-sday_snowdays = np.zeros(len(O))
-c=0
-for c in range(len(O)-1):
-    if sday[c+2,4]>sday[c+1,4]:
-        sday_snowdays[c+1] = 1
-    else:
-        sday_snowdays[c+1] = 0
+#complete function
+##############################################################################################################################################################################
+def snow_days_timing(observations_filepath, output_filepath):
+    
+    #calculate days of increasing SWE (snow water equivalent), or just snow depth, in observations
+    station_snow_observations = pd.read_csv(observations_filepath, sep = ',', engine = 'python', parse_dates = True) #defaults: ',' sep, 'python' engine, 'parse_dates=True'
+    
+    #select the time period from the observational time series that corresponds to the simulation period
+    observations_period_simulation = station_snow_observations[Nstart:Nend]
+    
+    #initialize array for snow days, with binary values: 1 for a day of increasing SWE, 0 for a day of decreasing SWE
+    observed_snow_days = np.zeros(len(observations_relevant))
+    a = 0
+    
+    for a in range(len(observed_snow_days)-1):
+        if float(observations_period_simulation.loc[a+Nstart+1, 'select_column']) > float(observations_period_simulation[a+Nstart, 'select_column']):
+            observed_snow_days[a+1] = 1
+        else:
+            observed_snow_days[a+1] = 0    
 
-############################################################
-#use snow rate output, using subcatchment 1
-######################################################################
-snow_dir = 'C:\\Users\\Asus\\Documents\\StudyProject2023S\\WaSiM_setuptest\\Test_output'
-snow_file = 'snowdem_25_2006_large.stat'
-snow_path = os.path.join(snow_dir,snow_file)
-snow = np.loadtxt(snow_path,dtype=str,skiprows=2,usecols=(0,1,2,3,4))
+    #then, calculate days of increasing SWE in an output series
+    output_snow_series = np.loadtxt(output_filepath, dtype = str, skiprows = Nskip, usecols = (N1...Nn)) #look through file to select Nskip and usecols(N1...Nn)
+    
+    #initialize array for snow days, with binary values: 1 for a day of increasing SWE, 0 for a day of decreasing SWE    
+    output_snow_days = np.zeros(len(output_snow_series))
+    b = 0
+    
+    for b in range(len(output_snow_days)-1):
+        if output_snow_series[b+2, Nselect_column] > output_snow_series[b+1, Nselect_column]:
+            output_snow_days[b+1] = 1
+        else:
+            output_snow_days[b+1] = 0
 
-snow_snowdays = np.zeros(len(O))
-d=0
-for d in range(len(O)-1):
-    if float(snow[d+1,4])>0:
-        snow_snowdays[d] = 1
-    else:
-        snow_snowdays[d] = 0
+    #use root mean squared error (RMSE) as default, other criteria can be used  
+    RMSE = math.sqrt(np.square(observed_snow_days - output_snow_days).mean())
+    
+    #optional step: create dataframe
+    SWE_compare = pd.DataFrame({'date':[], 'observed_SWE':[], 'output_SWE':[]})
+    SWE_compare['date'] = pd.date_range(start = 'YYYY-MM-DD', end = 'YYYY-MM-DD', freq = 'D') #start and end dates of the simulation period
+    SWE_compare['date'] = SWE_compare['date'].dt.date
+    SWE_compare['observed_SWE'] = observations_period_simulation
+    SWE_compare['output_SWE'] = output_snow_series
 
-############################################################
-#create snow rate special output at zufritt station?
-######################################################################
-
-############################################################
-#fsc timing?
-######################################################################
- 
-############################################################
-#calculate days of increasing SWE in 'otherSnowData' output, using  zufritt station location
-###################################################################### 
-ssto_dir = 'C:\\Users\\Asus\\Documents\\StudyProject2023S\\WaSiM_setuptest\\output_run_glacierSA_55'
-ssto_file = 'special_output_otherSnowData.stat2011'  
-ssto_path = os.path.join(ssto_dir,ssto_file)
-ssto = np.loadtxt(ssto_path,dtype=str,skiprows=2,usecols=(0,1,2,3,4,6,8))
-
-ssto_snowdays = np.zeros(len(O))
-b=0
-for b in range(len(O)-1):
-    if float(ssto[b+2,6])>float(ssto[b+1,6]):
-        ssto_snowdays[b+1] = 1
-    else:
-        ssto_snowdays[b+1] = 0
-
-############################################################
-#station 2401.09 from WRF data
-######################################################################    
-WRF2401_dir = 'C:\\Users\\Asus\\Documents\\StudyProject2023S\\WaSiM_setuptest\\Input'  
-WRF2401_file = 'WRF_Martelltal_daily_precipitation_1850_2015.txt'
-WRF2401_path = os.path.join(WRF2401_dir,WRF2401_file)
-WRF2401 = np.loadtxt(WRF2401_path,dtype=str,skiprows=1,usecols=(0,1,2,3,23))
-WRF2401 = WRF2401[57377:58838]
-
-WRF2401_precdays = np.zeros(len(O))
-f=0
-for f in range(len(O)-1):
-    if float(WRF2401[f+1,4])>float(WRF2401[f,4]):
-        WRF2401_precdays[f+1] = 1
-    else:
-        WRF2401_precdays[f+1] = 0    
-
-#set approximate summer non-snow precipitation to 0 using ssto numbers, don't take it too seriously
-#true timeline
-WRF2401_precdays_adj = WRF2401_precdays
-WRF2401_precdays_adj[247:332] = 0
-WRF2401_precdays_adj[618:731] = 0
-WRF2401_precdays_adj[1004:1096] = 0
-WRF2401_precdays_adj[1370:1432] = 0
-
-############################################################
-#make summary dataframe
-######################################################################
-snowdays = pd.DataFrame({'date':[],'obs':[],'ssto':[],'sday':[],'snow':[]})
-snowdays['date'] = pd.date_range(start='2006-10-01',end='2010-09-30',freq ='D')
-snowdays['date'] = snowdays['date'].dt.date
-snowdays['obs'] = O_snowdays
-snowdays['ssto'] = ssto_snowdays
-snowdays['sday'] = sday_snowdays
-snowdays['snow'] = snow_snowdays
-
-############################################################
-#RMSE for timing between obs and ssto
-######################################################################
-#residual
-residual_ssto = np.zeros((len(snowdays),1))
-e=0
-for e in range(len(residual_ssto)):
-    residual_ssto[e,0] = snowdays.loc[e,'obs'] - snowdays.loc[e,'ssto']
-residual_ssto_sq = np.square(residual_ssto)    
-   
-#RMSE (root mean square error)
-RMSE_ssto = math.sqrt((residual_ssto_sq).mean())
-
-############################################################
-#RMSE for timing between obs and sday
-######################################################################
-#residual
-residual_sday = np.zeros((len(snowdays),1))
-e=0
-for e in range(len(residual_sday)):
-    residual_sday[e,0] = snowdays.loc[e,'obs'] - snowdays.loc[e,'sday']
-residual_sday_sq = np.square(residual_sday)    
-   
-#RMSE (root mean square error)
-RMSE_sday = math.sqrt((residual_sday_sq).mean())
-
-############################################################
-#RMSE for timing between obs and snow
-######################################################################
-#residual
-residual_snow = np.zeros((len(snowdays),1))
-e=0
-for e in range(len(residual_snow)):
-    residual_snow[e,0] = snowdays.loc[e,'obs'] - snowdays.loc[e,'snow']
-residual_snow_sq = np.square(residual_snow)    
-   
-#RMSE (root mean square error)
-RMSE_snow = math.sqrt((residual_snow_sq).mean())
-
-############################################################
-#RMSE for timing between obs and WRF2401
-######################################################################
-#residual
-residual_WRF2401 = np.zeros((len(snowdays),1))
-e=0
-for e in range(len(residual_WRF2401)):
-    residual_WRF2401[e,0] = snowdays.loc[e,'obs'] - WRF2401_precdays_adj[e]
-residual_WRF2401_sq = np.square(residual_WRF2401)    
-   
-#RMSE (root mean square error)
-RMSE_WRF2401 = math.sqrt((residual_WRF2401_sq).mean())
-
-############################################################
-#make some plots for presentations
-######################################################################
-plt.plot(snowdays['date'], snowdays['ssto'], 'r.', markersize=1)
-plt.plot(snowdays['date'], snowdays['obs'], 'b.', markersize=1)
-plt.plot(snowdays['date'], snowdays['snow'], 'g.', markersize=1)
-plt.plot(snowdays['date'], snowdays['sday'], 'y.', markersize=1)
-
-
-
-
-
-
-
-
+    #optional step: plot time series
+    SWE_compare = SWE_compare.set_index('date')
+    
+    #Adjusting the figure size
+    fig = plt.subplots(figsize=(10, 5))
+    #x axis
+    plt.xlim(SWE_compare.index.min(), SWE_compare.index.max())
+    ticks = list(SWE_compare.index)
+    plt.xticks(ticks, rotation=45)
+    #Rotaing axis ticks and customizing their font size
+    plt.xticks(rotation=30, fontsize=15)
+    
+    for column in ['observed_SWE', 'output_SWE']:
+        plt.plot(SWE_compare.index, SWE_compare[column], markersize = 1)
+    
+    #return RMSE, or as many goodness-of-fit criteria as applicable
+    return RMSE
+    
+    #end function
+##############################################################################################################################################################################
+        
+#run function
+RMSE = snow_days_timing(observations_filepath, output_filepath)
+    
+#end

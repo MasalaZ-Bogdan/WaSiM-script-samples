@@ -4,10 +4,14 @@ then creates the glacier cover (glc) and glacier identification (glid) raster fi
 Created as an alternative to ArcGIS functions. Requires an existing subcatchment raster, (file extension ".ezg"), from TANALYS.
 
 '''
+
 #import libraries
 import numpy as np
 import os
 import rasterio
+
+#set path of working directory
+path = os.getcwd() 
 
 #set directory paths and filenames
 #path to the WaSiM initialization folder
@@ -25,7 +29,7 @@ subcatchment_identification_file = 'subcatchments.ezg'
 
 def initialization_glacier_rasters(observations_folder, initialization_folder, input_folder, observed_glacier_cover, subcatchment_identification):
 
-    #opens your raster of observed glacier extent
+    #open the raster of observed glacier extent
     observed_glaciers_ds = rasterio.open(os.path.join(observations_folder, observed_glacier_cover)) #
     observed_glaciers = observed_glaciers_ds.read(1)
     
@@ -44,7 +48,8 @@ def initialization_glacier_rasters(observations_folder, initialization_folder, i
     catchment_glacier_cover =  observed_glaciers + subcatchments_zeroed
     #set all negative values to WaSiM nodata value (-9999)
     catchment_glacier_cover[catchment_glacier_cover < 0] = -9999
-    #make copy of glc ezg raster with data values set to 0
+    
+    #for glid raster, first make copy of glc ezg raster with data values set to 0
     catchment_glacier_cover_zeroed = catchment_glacier_cover.copy()
     catchment_glacier_cover_zeroed[catchment_glacier_cover_zeroed > 0] = 0
     #add subcatchment raster to zeroed glc ezg raster to get glid raster
