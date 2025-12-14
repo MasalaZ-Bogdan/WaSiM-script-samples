@@ -22,6 +22,7 @@ WaSiM_initialization_folder = 'init_folder'
 WaSiM_input_folder = 'input_folder'
 WaSiM_main_directory = 'main_directory'
 output_folder = 'output'
+subcatchment_identification_file = 'subcatchments.ezg'
 
 ##############################################################################################################################################################################
 def fractional_glacier_covered_area(input_folder, subcatchment_identification_file, output_folder):
