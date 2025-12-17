@@ -27,6 +27,7 @@ subcatchment_identification_file = 'subcatchments.ezg'
 
 #define function for entire process
 
+##############################################################################################################################################################################
 def initialization_glacier_rasters(observations_folder, initialization_folder, input_folder, observed_glacier_cover, subcatchment_identification):
 
     #open the raster of observed glacier extent
@@ -73,6 +74,7 @@ def initialization_glacier_rasters(observations_folder, initialization_folder, i
     observed_glaciers_ds.close()
     subcatchments_ds.close()
     #end function
+##############################################################################################################################################################################
 
 #run function
 initialization_glacier_rasters(project_observations_folder, WaSiM_initialization_folder, WaSiM_input_folder, observed_glacier_cover_file, subcatchment_identification_file)

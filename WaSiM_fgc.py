@@ -51,6 +51,7 @@ def fractional_glacier_covered_area(input_folder, subcatchment_identification_fi
 
     #compute fractional glacier-covered area and fill in table
     for a in range(len(glacier_cover_list)):
+        #open binary glacier cover raster
         glacier_cover_ds = rasterio.open(glacier_cover_list[a])
         glacier_cover = glacier_cover_ds.read(1)
         #set non-data values to 0
@@ -73,7 +74,7 @@ def fractional_glacier_covered_area(input_folder, subcatchment_identification_fi
     #can delete output glacier cover rasters
     #delete fgc rasters after all
     for delete_file in os.listdir(output_folder):
-        if delete_file.startswith(('file ending')) and file_del.endswith('file start'):
+        if delete_file.startswith(('file start')) and file_del.endswith('file ending'):
             os.unlink(os.path.join(output_folder, delete_file))  
 
     #close open raster files
